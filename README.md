@@ -1,1 +1,1 @@
-# Python-Adidas-Sales-Dashboard-using-Streamlit-and-Plotly
+# Python-Adidas-Sales-Dashboard-Streamlit-Plotly
