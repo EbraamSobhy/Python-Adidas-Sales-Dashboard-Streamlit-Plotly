@@ -4,15 +4,19 @@ import datetime
 from PIL import Image
 import plotly.express as px
 import plotly.graph_objects as go
+from langchain.chains.qa_with_sources.stuff_prompt import template
+from matplotlib.pyplot import legend
 
-# reading data from Excel file
 df = pd.read_excel("Adidas.xlsx")
 st.set_page_config(layout="wide")
+
 st.markdown('<style>div.block-container{padding-top:3rem;}</style>', unsafe_allow_html=True)
+
 image = Image.open("adidas-logo.jpg")
-image = image.resize((100, 120))  # (width, height)
+image = image.resize((100, 120))
 
 col1, col2 = st.columns([0.1, 0.9])
+
 with col1:
     st.image(image, width=100)
 
@@ -29,6 +33,59 @@ with col2:
     st.markdown(html_title, unsafe_allow_html=True)
 
 col3, col4, col5 = st.columns([0.1, 0.45, 0.45])
+
 with col3:
     box_date = str(datetime.datetime.now().strftime("%d %B %Y"))
-    st.write(f"Last Update by: \n {box_date}")
+    st.write(f"📅 **Last Update:** \n {box_date}")
+
+with col4:
+    fig = px.bar(df,
+                 x="Retailer",
+                 y="TotalSales",
+                 labels={"TotalSales": "Total Sales ($)"},
+                 title="Total Sales by Retailer",
+                 hover_data=["TotalSales"],
+                 template="gridon",
+                 height=500,
+                 width=600)
+    st.plotly_chart(fig, use_container_width=False)
+
+_, view1, dwn1, view2, dwn2 = st.columns([0.15, 0.20, 0.20, 0.20, 0.20])
+
+with view1:
+    expander = st.expander("📊 **Retailer wise Sales**")
+    data = df.groupby("Retailer")["TotalSales"].sum()
+    expander.write(data)
+with dwn1:
+    st.download_button("Get Data", data = data.to_csv().encode("utf-8"),
+                       file_name="Retailer Sales.csv", mime="text/csv")
+
+df["Month_Year"] = df["InvoiceDate"].dt.strftime("%b' %y")
+result = df.groupby(by = df["Month_Year"])["TotalSales"].sum().reset_index()
+
+with col5:
+    fig1 = px.line(result, x = "Month_Year", y = "TotalSales", title="Total Sales Over Time",
+                   template="gridon" ,height=500, width=500)
+    st.plotly_chart(fig1, use_container_width=True)
+
+with view2:
+    expander = st.expander("📊 **Monthly Sales**")
+    data = result
+    expander.write(data)
+with dwn2:
+    st.download_button("Get Data", data = data.to_csv().encode("utf-8"),
+                       file_name="Monthly Sales.csv", mime="text/csv")
+st.divider()
+
+result1 = df.groupby(by = "State")[["TotalSales", "UnitsSold"]].sum.reset_index()
+fig3 = go.Figure()
+fig3.add_trace(go.Bar(x = result["State"], y = result1["TotalSales"], name = "Total Sales"))
+fig3.add_trace(go.scatter(x=result1["State"], y = result1["UnitsSold"], mode = "lines",
+                          name="Units Sold" , yaxis = "y2"))
+fig3.update_layout(title = "Total Sales and Units Sold by State",
+                   xaxis = dict(title = "State"),
+                   yaxis = dict(title = "Total Sales", showgrid= False),
+                   yaxis2 =  dict(title = " Units Sold", overlaying = "y", side = "right"),
+                   template = "gridon",
+                   legend = dict(x=1, y = 1)
+)
