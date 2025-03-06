@@ -4,8 +4,7 @@ import datetime
 from PIL import Image
 import plotly.express as px
 import plotly.graph_objects as go
-from langchain.chains.qa_with_sources.stuff_prompt import template
-from matplotlib.pyplot import legend
+from plotly.express import treemap
 
 df = pd.read_excel("Adidas.xlsx")
 st.set_page_config(layout="wide")
@@ -77,15 +76,41 @@ with dwn2:
                        file_name="Monthly Sales.csv", mime="text/csv")
 st.divider()
 
-result1 = df.groupby(by = "State")[["TotalSales", "UnitsSold"]].sum.reset_index()
+result1 = df.groupby(by="State")[["TotalSales", "UnitsSold"]].sum().reset_index()
 fig3 = go.Figure()
-fig3.add_trace(go.Bar(x = result["State"], y = result1["TotalSales"], name = "Total Sales"))
-fig3.add_trace(go.scatter(x=result1["State"], y = result1["UnitsSold"], mode = "lines",
-                          name="Units Sold" , yaxis = "y2"))
-fig3.update_layout(title = "Total Sales and Units Sold by State",
-                   xaxis = dict(title = "State"),
-                   yaxis = dict(title = "Total Sales", showgrid= False),
-                   yaxis2 =  dict(title = " Units Sold", overlaying = "y", side = "right"),
-                   template = "gridon",
-                   legend = dict(x=1, y = 1)
+
+fig3.add_trace(go.Bar(x=result1["State"], y=result1["TotalSales"], name="Total Sales"))
+fig3.add_trace(go.Scatter(x=result1["State"], y=result1["UnitsSold"], mode="lines",
+                          name="Units Sold", yaxis="y2"))
+
+fig3.update_layout(
+    title="Total Sales and Units Sold by State",
+    xaxis=dict(title="State"),
+    yaxis=dict(title="Total Sales", showgrid=False),
+    yaxis2=dict(title="Units Sold", overlaying="y", side="right"),
+    template="gridon",
+    legend=dict(x=1, y=1)
 )
+
+_, col6 = st.columns([0.1, 1])
+with col6:
+    st.plotly_chart(fig3, use_container_width=True)
+
+_, view3, dwn3 = st.columns([0.5,0.45,0.45])
+with view3:
+    expander = st.expander("View Data for Sales by Units Sold")
+    expander.write(result1)
+with dwn3:
+    st.download_button("Get Data", data = result1.to_csv().encode("utf-8"),
+                       file_name = "Sales by UnitsSold.csv", mime="text/csv")
+st.divider()
+
+_, col7 = st.columns([0.1, 1])
+treemap = df[["Region", "City", "TotSales"]].groupby(by = ["Region", "City"])["TotSales"].sum().reset_index()
+
+def format_sales(value):
+    if value >= 0:
+        return '{:.2f} Lakh'.format(value / 1_000_00)
+treemap["TotalSales (Formatted)"] = treemap["TotalSales"].apply(format_sales)
+
+fig4 = px.treemap()
